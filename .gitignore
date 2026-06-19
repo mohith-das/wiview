@@ -1,0 +1,42 @@
+# PlatformIO build artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+.pioinit
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.python-version
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — NEVER commit WiFi credentials or API keys
+*.cred
+*.secret
+.env
+wifi_creds.h
+
+# Build outputs
+build/
+out/
+dist/
+
+# opencode config
+opencode.json
+.opencode/
+cardputer-wifi-sense-PLAN.md
