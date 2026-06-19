@@ -17,8 +17,16 @@ void setup() {
     M5Cardputer.begin(cfg, true);
 
     Serial.println("[OK] M5Cardputer initialized");
-    Serial.printf("  Board: %s\n", M5Cardputer.getBoardName());
-    Serial.printf("  Display: %dx%d\n", M5Cardputer.Display.width(), M5Cardputer.Display.height());
+    Serial.printf("  Display: %dx%d\n",
+                  M5Cardputer.Display.width(),
+                  M5Cardputer.Display.height());
+
+    // Verify IMU is enabled
+    if (M5.Imu.isEnabled()) {
+        Serial.println("  IMU: enabled (BMI270)");
+    } else {
+        Serial.println("  IMU: NOT enabled — check board config");
+    }
 
     // Draw hello text on screen
     M5Cardputer.Display.clear(TFT_BLACK);
@@ -36,14 +44,15 @@ void setup() {
 }
 
 void loop() {
-    // Read a keypress
     M5Cardputer.update();
+
+    // Read a keypress
     if (M5Cardputer.Keyboard.isChange()) {
         if (M5Cardputer.Keyboard.isPressed()) {
-            auto keys = M5Cardputer.Keyboard.keysState();
+            auto& state = M5Cardputer.Keyboard.keysState();
             Serial.print("Key pressed: ");
-            for (auto k : keys) {
-                if (k != 0) Serial.write(k);
+            for (char c : state.word) {
+                Serial.write(c);
             }
             Serial.println();
 
@@ -51,21 +60,20 @@ void loop() {
             M5Cardputer.Display.setCursor(4, 104);
             M5Cardputer.Display.setTextColor(TFT_GREEN, TFT_BLACK);
             M5Cardputer.Display.print("Keys: ");
-            for (auto k : keys) {
-                if (k != 0) M5Cardputer.Display.write(k);
+            for (char c : state.word) {
+                M5Cardputer.Display.write(c);
             }
         } else {
             Serial.println("Key released");
         }
     }
 
-    // Read one BMI270 sample
-    M5Cardputer.update();
-    if (M5Cardputer.Imu.isEnabled()) {
+    // Read one BMI270 IMU sample
+    if (M5.Imu.isEnabled()) {
         float ax, ay, az;
         float gx, gy, gz;
-        M5Cardputer.Imu.getAccel(&ax, &ay, &az);
-        M5Cardputer.Imu.getGyro(&gx, &gy, &gz);
+        M5.Imu.getAccel(&ax, &ay, &az);
+        M5.Imu.getGyro(&gx, &gy, &gz);
 
         Serial.printf("IMU  accel: (%+.3f, %+.3f, %+.3f) g | gyro: (%+.3f, %+.3f, %+.3f) dps\n",
                       ax, ay, az, gx, gy, gz);
