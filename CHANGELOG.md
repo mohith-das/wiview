@@ -2,7 +2,7 @@
 
 All notable changes to the wiview project.
 
-## [Unreleased]
+## [0.3.1] — 2026-06-19
 
 ### Added
 - **WiFi manager (`w` key).** Store up to 8 networks and manage them on-device:
