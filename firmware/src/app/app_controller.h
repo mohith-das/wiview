@@ -17,7 +17,6 @@ private:
     WifiSetupScreen* m_screensWifi = nullptr;
     ScreenId m_current;
     SensorData m_data;
-    uint32_t m_wifiForgetArmedMs = 0;  // timestamp of first 'w' press (0 = not armed)
 
     void initScreens();
     void finishInit();

@@ -28,6 +28,22 @@ public:
     /// Load/save the "RuView direct" output-format toggle.
     static bool loadRuViewModeFromNVS();
     static void saveRuViewModeToNVS(bool on);
+
+    // ── Multi-network store ────────────────────────────────────────────────
+    static constexpr int MAX_NETWORKS = 8;
+
+    /// Number of saved networks (0..MAX_NETWORKS). Migrates legacy creds.
+    static int  networkCount();
+    /// Read network i (0-based). Returns false if i is out of range.
+    static bool getNetwork(int i, String& ssid, String& password);
+    /// Index of the network connected on boot (clamped to a valid entry).
+    static int  activeIndex();
+    static void setActiveIndex(int i);
+    /// Add (or update password of an existing) network. Returns its index, or
+    /// -1 if the store is full.
+    static int  addNetwork(const String& ssid, const String& password);
+    /// Remove network i; later entries shift down. Adjusts the active index.
+    static void removeNetwork(int i);
 };
 
 } // namespace wiview

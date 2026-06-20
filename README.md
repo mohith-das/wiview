@@ -52,6 +52,7 @@ esptool.py --chip esp32s3 --port COMx write_flash 0x0 wiview-full.bin
 | `r`  | Recalibrate baseline          |
 | `h`  | Set stream host IP (manual)   |
 | `u`  | Toggle output: wiview / RuView |
+| `w`  | WiFi manager (add/switch/delete) |
 
 ## Build From Source
 

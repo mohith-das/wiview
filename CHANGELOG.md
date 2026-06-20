@@ -5,9 +5,15 @@ All notable changes to the wiview project.
 ## [Unreleased]
 
 ### Added
-- **Forget WiFi hotkey (`w`).** Press `w` on the Home screen (twice, to confirm)
-  to clear saved WiFi credentials and reboot into the setup screen — change
-  networks anytime without USB. Keeps the saved host IP / RuView-mode settings.
+- **WiFi manager (`w` key).** Store up to 8 networks and manage them on-device:
+  a list screen with cursor (`;`/`.`), Enter to switch (reconnects), `a` to add
+  a network (inline SSID/password entry), `d` to delete. Boot tries the active
+  network then falls back to the others. Legacy single-network creds migrate
+  automatically. No USB needed to change WiFi.
+
+### Changed
+- Global hotkeys (`s`/`r`/`u`/`w`) act only on the main views, so letters can be
+  typed into the host-setup and WiFi-manager text fields.
 
 ## [0.3.0] — 2026-06-19
 

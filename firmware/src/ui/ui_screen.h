@@ -11,6 +11,7 @@ enum class ScreenId {
     WATERFALL,
     BREATHING,
     HOST_SETUP,
+    WIFI_MGR,
     COUNT
 };
 

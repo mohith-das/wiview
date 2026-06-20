@@ -4,6 +4,7 @@
 #include "ui/ui_breathing.h"
 #include "ui/ui_wifi_setup.h"
 #include "ui/ui_host_setup.h"
+#include "ui/ui_wifi_manager.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_provision.h"
 #include "net/udp_streamer.h"
@@ -64,11 +65,19 @@ void AppController::begin() {
     M5Cardputer.begin(cfg, true);
     initScreens();
 
-    // Attempt WiFi with saved credentials
+    // Attempt WiFi: the active saved network first, then the others.
+    int n = WifiProvision::networkCount();
+    int act = WifiProvision::activeIndex();
     String ssid, pass;
-    bool hasCreds = WifiProvision::loadFromNVS(ssid, pass);
-    if (hasCreds) {
+    if (act >= 0 && WifiProvision::getNetwork(act, ssid, pass)) {
         g_wifi_ok = WifiManager::connect(ssid.c_str(), pass.c_str());
+    }
+    for (int i = 0; i < n && !g_wifi_ok; i++) {
+        if (i == act) continue;
+        if (WifiProvision::getNetwork(i, ssid, pass)) {
+            g_wifi_ok = WifiManager::connect(ssid.c_str(), pass.c_str());
+            if (g_wifi_ok) WifiProvision::setActiveIndex(i);
+        }
     }
 
     if (!g_wifi_ok) {
@@ -87,6 +96,7 @@ void AppController::initScreens() {
     m_screens[(int)ScreenId::WATERFALL]  = new WaterfallScreen();
     m_screens[(int)ScreenId::BREATHING]  = new BreathingScreen();
     m_screens[(int)ScreenId::HOST_SETUP] = new HostSetupScreen();
+    m_screens[(int)ScreenId::WIFI_MGR]   = new WifiManagerScreen();
 }
 
 void AppController::finishInit() {
@@ -274,12 +284,6 @@ void AppController::collectData() {
 void AppController::dispatchInput() {
     M5Cardputer.update();
 
-    // Expire the "forget WiFi" confirmation prompt after 5 s.
-    if (m_wifiForgetArmedMs != 0 && millis() - m_wifiForgetArmedMs >= 5000) {
-        m_wifiForgetArmedMs = 0;
-        m_data.wifi_forget_armed = false;
-    }
-
     if (M5.BtnA.wasPressed()) {
         // G0 cycles only the main views (Home/Waterfall/Breathing), not config
         // screens like Host setup.
@@ -293,48 +297,40 @@ void AppController::dispatchInput() {
     if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
         auto& keys = M5Cardputer.Keyboard.keysState();
 
-        // Global keys
-        for (char c : keys.word) {
-            if (c == 's') {
-                // Toggle streaming
-                if (!g_streaming) {
-                    g_streaming = g_streamer.begin(streamTarget(), streamPort());
-                } else {
-                    g_streamer.stop();
-                    g_streaming = false;
+        // Global hotkeys are active only on the main views — config/entry
+        // screens (host setup, WiFi manager) get the full keyboard so these
+        // letters can be typed into text fields.
+        if ((int)m_current < NUM_MAIN_SCREENS) {
+            for (char c : keys.word) {
+                if (c == 's') {
+                    if (!g_streaming) {
+                        g_streaming = g_streamer.begin(streamTarget(), streamPort());
+                    } else {
+                        g_streamer.stop();
+                        g_streaming = false;
+                    }
+                    m_data.streaming = g_streaming;
+                    m_data.stream_target_ip = g_streaming ? (uint32_t)g_streamer.target() : 0;
+                    return;
                 }
-                m_data.streaming = g_streaming;
-                m_data.stream_target_ip = g_streaming ? (uint32_t)g_streamer.target() : 0;
-                return;
-            }
-            if (c == 'r') {
-                // Recalibrate
-                g_cal.reset();
-                g_cal_ready = false;
-                return;
-            }
-            if (c == 'u') {
-                // Toggle output format: wiview native <-> RuView ADR-018 direct
-                bool rv = !g_streamer.ruViewMode();
-                g_streamer.setRuViewMode(rv);
-                m_data.ruview_mode = rv;
-                WifiProvision::saveRuViewModeToNVS(rv);
-                Serial.printf("[Fmt] output = %s\n", rv ? "RuView ADR-018" : "wiview native");
-                return;
-            }
-            if (c == 'w') {
-                // Forget WiFi — two-press confirm to avoid an accidental wipe.
-                uint32_t now = millis();
-                if (m_wifiForgetArmedMs != 0 && now - m_wifiForgetArmedMs < 5000) {
-                    Serial.println("[WiFi] Forgetting credentials. Rebooting to setup...");
-                    WifiProvision::clearWifiCreds();
-                    delay(300);
-                    ESP.restart();
-                } else {
-                    m_wifiForgetArmedMs = now;
-                    m_data.wifi_forget_armed = true;
+                if (c == 'r') {            // recalibrate
+                    g_cal.reset();
+                    g_cal_ready = false;
+                    return;
                 }
-                return;
+                if (c == 'u') {            // toggle wiview native <-> RuView ADR-018
+                    bool rv = !g_streamer.ruViewMode();
+                    g_streamer.setRuViewMode(rv);
+                    m_data.ruview_mode = rv;
+                    WifiProvision::saveRuViewModeToNVS(rv);
+                    Serial.printf("[Fmt] output = %s\n", rv ? "RuView ADR-018" : "wiview native");
+                    return;
+                }
+                if (c == 'w') {            // open the WiFi manager
+                    m_current = ScreenId::WIFI_MGR;
+                    m_screens[(int)m_current]->enter();
+                    return;
+                }
             }
         }
 
