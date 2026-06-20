@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio-release-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-release-
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build firmware
+        run: pio run -e cardputer
+
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p release
+          cp .pio/build/cardputer/firmware.bin release/
+          cp .pio/build/cardputer/bootloader.bin release/
+          cp .pio/build/cardputer/partitions.bin release/
+
+          # Create merged binary for one-line flash
+          python -m esptool --chip esp32s3 merge_bin \
+            -o release/wiview-full.bin \
+            --flash_mode qio --flash_freq 80m --flash_size 8MB \
+            0x0 .pio/build/cardputer/bootloader.bin \
+            0x8000 .pio/build/cardputer/partitions.bin \
+            0x10000 .pio/build/cardputer/firmware.bin
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: |
+            ## wiview ${{ github.ref_name }}
+
+            ### Flash Instructions
+
+            1. Download `wiview-full.bin`
+            2. Put Cardputer-Adv in download mode (power OFF, hold G0, power ON)
+            3. Flash: `esptool.py --chip esp32s3 --port /dev/cu.usbmodem* write_flash 0x0 wiview-full.bin`
+
+            ### Files
+            - `wiview-full.bin` — Merged binary for one-line esptool flash
+            - `firmware.bin` — Application firmware (flash at 0x10000)
+            - `bootloader.bin` — Bootloader (flash at 0x0)
+            - `partitions.bin` — Partition table (flash at 0x8000)
+
+            See [README](https://github.com/mohith-das/wiview#quick-flash) for full instructions.
+          files: |
+            release/firmware.bin
+            release/bootloader.bin
+            release/partitions.bin
+            release/wiview-full.bin
+          draft: false
+          prerelease: false

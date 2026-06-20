@@ -49,3 +49,37 @@ jobs:
         run: pip install platformio
       - name: Run native tests
         run: pio test -e native
+
+  release-dry-run:
+    name: Release (dry-run)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [build-cardputer, test-native]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio-release-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-release-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install PlatformIO
+        run: pip install platformio
+      - name: Build firmware
+        run: pio run -e cardputer
+      - name: Verify merged binary creation
+        run: |
+          pip install esptool
+          python -m esptool --chip esp32s3 merge_bin \
+            -o /tmp/test-merge.bin \
+            --flash_mode qio --flash_freq 80m --flash_size 8MB \
+            0x0 .pio/build/cardputer/bootloader.bin \
+            0x8000 .pio/build/cardputer/partitions.bin \
+            0x10000 .pio/build/cardputer/firmware.bin
+          ls -lh /tmp/test-merge.bin
+          echo "Merge OK: $(stat -c%s /tmp/test-merge.bin) bytes"

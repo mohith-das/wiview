@@ -46,3 +46,7 @@ wifi_creds.*
 host/__pycache__/
 host/*.csv
 host/*.png
+
+# Release artifacts
+release/
+/tmp/

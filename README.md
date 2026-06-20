@@ -1,29 +1,131 @@
 # wiview — WiFi Sensing on the M5Stack Cardputer-Adv
 
 [![CI](https://github.com/mohith-das/wiview/actions/workflows/ci.yml/badge.svg)](https://github.com/mohith-das/wiview/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A WiFi Channel State Information (CSI) sensing device that runs on the
-M5Stack Cardputer-Adv (ESP32-S3FN8 / Stamp-S3A). Captures CSI on-device,
-runs signal processing for presence/motion/breathing detection, and displays
-results live on the built-in screen.
+**Turn your Cardputer into a contactless WiFi sensor.** wiview captures WiFi
+Channel State Information (CSI) on-device, runs signal processing for
+presence/motion/breathing detection, and displays results live on the
+built-in screen. No external hardware needed.
 
-**Inspired by [RuView / WiFi-DensePose](https://github.com/ruvnet/RuView)** (MIT) —
-an independent, clean-room implementation.
+> **Inspired by [RuView / WiFi-DensePose](https://github.com/ruvnet/RuView)** (MIT) —
+> an independent, clean-room implementation. This project shares RuView's
+> commitment to honest claims and open-source engineering.
 
-> ⚠️ **Early development.** Phase 0: hardware bootstrap. Not yet functional for sensing.
+## What It Does
 
-## Status
+| Capability          | How It Works                                              | Honest Notes |
+|---------------------|-----------------------------------------------------------|--------------|
+| **Presence**        | CSI amplitude variance vs. calibrated baseline (z-score)  | Reliable within ~2–3 m of the device |
+| **Motion**          | Temporal variance of CSI amplitude over 32-sample window  | Distinguishes still vs. walking |
+| **Breathing**       | Bandpass-filtered CSI amplitude → zero-crossing BPM       | Experimental. Subject must sit still ~2 m away. Range: 6–30 BPM |
+| **Device-motion gate** | BMI270 IMU suppresses CSI inferences when the device is bumped or moved | Prevents false triggers |
 
-- [x] Phase 0 — Bootstrap (hello-world on Cardputer-Adv)
-- [ ] Phase 1 — CSI capture
-- [ ] Phase 2 — DSP core + presence
-- [ ] Phase 3 — Breathing + UI
-- [ ] Phase 4 — Streaming + host companion
-- [ ] Phase 5 — Productize
+## Quick Flash
 
-## Quick Start
+1. **Download** the latest `wiview-full.bin` from [Releases](https://github.com/mohith-das/wiview/releases)
+2. Put your Cardputer-Adv in download mode:
+   - Power switch **OFF**
+   - Hold **G0** button (left side)
+   - Power switch **ON**, then release G0
+3. Flash with esptool:
 
-See [`docs/flashing.md`](docs/flashing.md) for flashing instructions.
+```bash
+# macOS / Linux
+esptool.py --chip esp32s3 --port /dev/cu.usbmodem* write_flash 0x0 wiview-full.bin
+
+# Windows
+esptool.py --chip esp32s3 --port COMx write_flash 0x0 wiview-full.bin
+```
+
+4. Cycle power. On first boot, use the keyboard to enter your WiFi SSID and password.
+
+## Keyboard Controls
+
+| Key  | Action                        |
+|------|-------------------------------|
+| `1`  | Home view (presence + motion) |
+| `2`  | Waterfall (CSI heatmap)       |
+| `3`  | Breathing (waveform + BPM)    |
+| `G0` | Cycle views                   |
+| `s`  | Toggle UDP streaming          |
+| `r`  | Recalibrate baseline          |
+
+## Build From Source
+
+```bash
+# Install PlatformIO
+pip install platformio
+
+# Clone and build
+git clone https://github.com/mohith-das/wiview.git
+cd wiview
+pio run -e cardputer
+
+# Flash
+pio run -e cardputer -t upload
+
+# Run native tests
+pio test -e native
+```
+
+## Host Companion (Optional)
+
+Stream CSI data and inferences to your computer for logging and live plotting:
+
+```bash
+pip install -r host/requirements.txt
+python host/wiview_host.py --csv data.csv
+```
+
+Press `s` on the Cardputer to start streaming. See [`docs/protocol.md`](docs/protocol.md) for the wire format.
+
+## Hardware Requirements
+
+- **M5Stack Cardputer-Adv** (Stamp-S3A / ESP32-S3FN8)
+  - 8 MB flash, no PSRAM
+  - BMI270 IMU, ES8311 audio, ST7789V2 display
+- Works with the original Cardputer (without IMU gate)
+- USB-C cable for flashing
+
+## Repository
+
+```
+wiview/
+├── firmware/src/
+│   ├── main.cpp          # Entry point
+│   ├── csi/              # ESP32 CSI capture + packet generator
+│   ├── dsp/              # Preprocessing, calibration, presence, motion, breathing
+│   ├── sensors/          # BMI270 IMU gate
+│   ├── net/              # WiFi, NVS provisioning, UDP streamer
+│   ├── ui/               # Home, waterfall, breathing screens
+│   └── app/              # App controller + state machine
+├── test/test_dsp/        # 25 native unit tests (PlatformIO native env)
+├── host/                 # Python companion (UDP receiver + live plot)
+├── docs/                 # Flashing guide, architecture, protocol spec
+└── .github/workflows/    # CI: build + tests + release-on-tag
+```
+
+## Honest Claims
+
+wiview is a **research-grade sensing prototype**, not a medical device or
+security product. The algorithms work under controlled conditions:
+- Presence detection requires a relatively static RF environment
+- Breathing detection requires a still subject within 2–3 meters
+- CSI quality depends on WiFi channel congestion and AP behavior
+- The IMU gate suppresses false triggers from device movement, not
+  all environmental artifacts
+
+All outputs are labeled as **estimates**. No accuracy guarantees are made.
+Always validate against ground truth for your specific environment.
+
+## Credits
+
+This project is inspired by [RuView / WiFi-DensePose](https://github.com/ruvnet/RuView)
+by [@ruvnet](https://github.com/ruvnet), an open-source ESP32-S3 WiFi sensing
+platform (MIT licensed). wiview is an independent, clean-room implementation
+that shares the same algorithms and engineering culture but targets the
+M5Stack Cardputer form factor with an Arduino + PlatformIO stack.
 
 ## License
 
