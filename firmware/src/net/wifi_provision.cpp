@@ -6,6 +6,7 @@ namespace wiview {
 static constexpr const char* NVS_NS = "wiview";
 static constexpr const char* KEY_SSID = "ssid";
 static constexpr const char* KEY_PASS = "pass";
+static constexpr const char* KEY_HOST = "host";
 
 bool WifiProvision::loadFromNVS(String& ssid, String& password) {
     Preferences prefs;
@@ -28,6 +29,21 @@ void WifiProvision::clearNVS() {
     Preferences prefs;
     prefs.begin(NVS_NS, false);
     prefs.clear();
+    prefs.end();
+}
+
+String WifiProvision::loadHostFromNVS() {
+    Preferences prefs;
+    if (!prefs.begin(NVS_NS, true)) return "";
+    String host = prefs.getString(KEY_HOST, "");
+    prefs.end();
+    return host;
+}
+
+void WifiProvision::saveHostToNVS(const String& host) {
+    Preferences prefs;
+    prefs.begin(NVS_NS, false);
+    prefs.putString(KEY_HOST, host);
     prefs.end();
 }
 

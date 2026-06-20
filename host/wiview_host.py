@@ -24,6 +24,7 @@ import json
 import socket
 import struct
 import sys
+import threading
 import time
 from collections import deque
 
@@ -46,6 +47,59 @@ RV_CSI_HDR_FMT = "<IBBHIIbbBB"
 #   heartrate u32 (bpm*10000) | rssi i8 | n_persons u8 | pad2 |
 #   motion_energy f32 | presence_score f32 | timestamp_ms u32 | reserved u32
 RV_VITALS_FMT = "<IBBHIbBxxffII"
+
+
+# ── Zero-config discovery: announce this host so the Cardputer finds it ─────
+DISCOVERY_PORT = 5008
+ANNOUNCE_FMT = ">IBBH"             # magic, version, type(2=announce), listen_port
+ANNOUNCE_TYPE = 2
+
+
+def _local_ip() -> str:
+    """Best-effort local LAN IP (no packets actually sent)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+def start_announcer(listen_port: int, disc_port: int = DISCOVERY_PORT,
+                    interval: float = 2.0) -> threading.Event:
+    """Periodically broadcast a beacon so Cardputers auto-discover this host.
+
+    Sends to the limited broadcast and the /24-derived directed broadcast for
+    reliability across typical home networks.
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    beacon = struct.pack(ANNOUNCE_FMT, MAGIC, 1, ANNOUNCE_TYPE, listen_port)
+
+    ip = _local_ip()
+    targets = {("255.255.255.255", disc_port)}
+    octets = ip.split(".")
+    if len(octets) == 4:
+        targets.add((".".join(octets[:3] + ["255"]), disc_port))
+
+    stop = threading.Event()
+
+    def run():
+        while not stop.is_set():
+            for dst in targets:
+                try:
+                    sock.sendto(beacon, dst)
+                except OSError:
+                    pass
+            stop.wait(interval)
+        sock.close()
+
+    threading.Thread(target=run, daemon=True).start()
+    print(f"[announce] broadcasting host={ip} listen_port={listen_port} "
+          f"on UDP {disc_port} (Cardputers will auto-discover)")
+    return stop
 
 
 class RuViewBridge:
@@ -192,9 +246,15 @@ def main():
     parser.add_argument("--ruview-host", type=str, default="127.0.0.1", help="RuView host")
     parser.add_argument("--ruview-port", type=int, default=5006, help="RuView UDP port (host-side)")
     parser.add_argument("--ruview-freq", type=int, default=2412, help="freq_mhz to stamp on CSI frames")
+    parser.add_argument("--no-announce", action="store_true", help="Disable host auto-discovery broadcast")
+    parser.add_argument("--discovery-port", type=int, default=DISCOVERY_PORT, help="Discovery broadcast port")
     args = parser.parse_args()
 
     rx = WiviewReceiver(args.address, args.port)
+
+    announcer = None
+    if not args.no_announce:
+        announcer = start_announcer(args.port, args.discovery_port)
     if args.csv:
         rx.open_csv(args.csv)
         print(f"[CSV] Logging to {args.csv}")
@@ -273,6 +333,8 @@ def main():
     except KeyboardInterrupt:
         print("\n[wiview-host] Shutting down...")
     finally:
+        if announcer is not None:
+            announcer.set()
         rx.close()
         if fig is not None:
             import matplotlib.pyplot as plt

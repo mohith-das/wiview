@@ -4,13 +4,17 @@
 
 namespace wiview {
 
-/// Screen identifiers
+/// Screen identifiers. The first NUM_MAIN_SCREENS are the views G0 cycles
+/// through; screens after that are config/modal screens reached by hotkey.
 enum class ScreenId {
     HOME,
     WATERFALL,
     BREATHING,
+    HOST_SETUP,
     COUNT
 };
+
+static constexpr int NUM_MAIN_SCREENS = 3;  // HOME, WATERFALL, BREATHING
 
 /// Base class for all display screens
 class Screen {

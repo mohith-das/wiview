@@ -50,6 +50,7 @@ esptool.py --chip esp32s3 --port COMx write_flash 0x0 wiview-full.bin
 | `G0` | Cycle views                   |
 | `s`  | Toggle UDP streaming          |
 | `r`  | Recalibrate baseline          |
+| `h`  | Set stream host IP (manual)   |
 
 ## Build From Source
 
@@ -79,9 +80,14 @@ python host/wiview_host.py --csv data.csv          # live plot + CSV log
 python host/wiview_host.py --headless              # terminal only, no GUI
 ```
 
-Press `s` on the Cardputer to start streaming. By default the firmware streams
-to the **gateway**; to reach your computer, build with your host IP:
-`-DWIVIEW_STREAM_HOST=\"192.168.1.50\"` in `platformio.ini`.
+**Zero-config:** the host companion broadcasts an announce beacon on the LAN, so
+the Cardputer **auto-discovers it** — just run the host, then press `s` on the
+device. No IP to look up. The discovered host is cached in NVS for next time.
+
+If your network blocks broadcast (AP "client isolation"), set the host manually:
+press `h` on the Cardputer and type your computer's IP. As a build-time override
+you can also set `-DWIVIEW_STREAM_HOST=\"192.168.1.50\"` in `platformio.ini`.
+Resolution order: discovered/saved host → build flag → gateway.
 
 **RuView bridge:** `--ruview-compat` re-encodes frames into RuView's ADR-018
 wire format and forwards them to a RuView sensing-server. See

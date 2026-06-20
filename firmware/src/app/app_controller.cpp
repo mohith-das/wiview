@@ -3,9 +3,11 @@
 #include "ui/ui_waterfall.h"
 #include "ui/ui_breathing.h"
 #include "ui/ui_wifi_setup.h"
+#include "ui/ui_host_setup.h"
 #include "net/wifi_manager.h"
 #include "net/wifi_provision.h"
 #include "net/udp_streamer.h"
+#include "net/host_discovery.h"
 #include "csi/csi_capture.h"
 #include "csi/packet_gen.h"
 #include "dsp/dsp_preprocess.h"
@@ -30,10 +32,15 @@ static bool              g_csi_ok  = false;
 static bool              g_cal_ready = false;
 static bool              g_streaming = false;
 static float             g_amp_sc_buffer[MAX_SUBCARRIERS] = {};
+static IPAddress         g_host_ip;          // 0.0.0.0 = none (discovered / NVS / manual)
+static uint16_t          g_host_port = 5005;
 
-// Resolve the UDP streaming target. Uses WIVIEW_STREAM_HOST (build flag) if set
-// and parseable, otherwise falls back to the gateway.
+// Resolve the UDP streaming target, in priority order:
+//   1. a host learned via discovery / NVS / manual entry (g_host_ip)
+//   2. the WIVIEW_STREAM_HOST build flag, if set and parseable
+//   3. the gateway (last-resort default)
 static IPAddress streamTarget() {
+    if ((uint32_t)g_host_ip != 0) return g_host_ip;
 #ifdef WIVIEW_STREAM_HOST
     IPAddress ip;
     if (ip.fromString(WIVIEW_STREAM_HOST)) return ip;
@@ -41,10 +48,10 @@ static IPAddress streamTarget() {
     return WifiManager::gateway();
 }
 
+static uint16_t streamPort() { return g_host_port; }
+
 AppController::AppController() : m_current(ScreenId::HOME) {
-    m_screens[0] = nullptr;
-    m_screens[1] = nullptr;
-    m_screens[2] = nullptr;
+    for (int i = 0; i < (int)ScreenId::COUNT; i++) m_screens[i] = nullptr;
     m_screensWifi = nullptr;
 }
 
@@ -76,9 +83,10 @@ void AppController::begin() {
 }
 
 void AppController::initScreens() {
-    m_screens[0] = new HomeScreen();
-    m_screens[1] = new WaterfallScreen();
-    m_screens[2] = new BreathingScreen();
+    m_screens[(int)ScreenId::HOME]       = new HomeScreen();
+    m_screens[(int)ScreenId::WATERFALL]  = new WaterfallScreen();
+    m_screens[(int)ScreenId::BREATHING]  = new BreathingScreen();
+    m_screens[(int)ScreenId::HOST_SETUP] = new HostSetupScreen();
 }
 
 void AppController::finishInit() {
@@ -90,10 +98,47 @@ void AppController::finishInit() {
     g_motion.reset();
     g_breath.reset();
     m_data.amp_per_sc = g_amp_sc_buffer;
-    m_screens[(int)m_current]->enter();
 
-    // Start UDP streaming if host is reachable (gateway as default target)
-    // Streaming is OFF by default; user toggles with 's' key
+    // Stream-host resolution: a previously saved host (discovered or manually
+    // entered) wins; otherwise discovery beacons / the build flag / gateway.
+    String savedHost = WifiProvision::loadHostFromNVS();
+    if (savedHost.length() > 0) {
+        IPAddress ip;
+        if (ip.fromString(savedHost)) {
+            g_host_ip = ip;
+            Serial.printf("[Host] saved stream host = %s\n", savedHost.c_str());
+        }
+    }
+    HostDiscovery::begin();
+
+    m_screens[(int)m_current]->enter();
+    // Streaming is OFF by default; user toggles with 's' key.
+}
+
+// Apply a newly learned stream host (from discovery or manual entry): persist it
+// and, if a stream is already running, re-point it at the new target.
+void AppController::setStreamHost(const IPAddress& host, uint16_t port) {
+    bool changed = ((uint32_t)host != (uint32_t)g_host_ip) || (port != g_host_port);
+    g_host_ip   = host;
+    g_host_port = port;
+    if (!changed) return;
+
+    WifiProvision::saveHostToNVS(host.toString());
+    Serial.printf("[Host] stream host -> %s:%u\n", host.toString().c_str(), port);
+    if (g_streaming) {
+        g_streamer.stop();
+        g_streaming = g_streamer.begin(streamTarget(), streamPort());
+        m_data.streaming = g_streaming;
+        m_data.stream_target_ip = g_streaming ? (uint32_t)g_streamer.target() : 0;
+    }
+}
+
+void AppController::pollDiscovery() {
+    IPAddress host;
+    uint16_t  port = 0;
+    if (HostDiscovery::poll(host, port)) {
+        setStreamHost(host, port);
+    }
 }
 
 void AppController::showWifiSetup() {
@@ -217,7 +262,10 @@ void AppController::dispatchInput() {
     M5Cardputer.update();
 
     if (M5.BtnA.wasPressed()) {
-        int next = ((int)m_current + 1) % (int)ScreenId::COUNT;
+        // G0 cycles only the main views (Home/Waterfall/Breathing), not config
+        // screens like Host setup.
+        int base = (int)m_current;
+        int next = (base >= NUM_MAIN_SCREENS) ? 0 : (base + 1) % NUM_MAIN_SCREENS;
         m_current = (ScreenId)next;
         m_screens[(int)m_current]->enter();
         return;
@@ -231,7 +279,7 @@ void AppController::dispatchInput() {
             if (c == 's') {
                 // Toggle streaming
                 if (!g_streaming) {
-                    g_streaming = g_streamer.begin(streamTarget(), 5005);
+                    g_streaming = g_streamer.begin(streamTarget(), streamPort());
                 } else {
                     g_streamer.stop();
                     g_streaming = false;
@@ -251,6 +299,14 @@ void AppController::dispatchInput() {
         m_screens[(int)m_current]->handleKey(keys);
         ScreenId next = m_screens[(int)m_current]->nextScreen();
         if (next != m_current) {
+            // Apply a manually-entered host IP when leaving the Host setup screen.
+            if (m_current == ScreenId::HOST_SETUP) {
+                IPAddress entered;
+                auto* hs = static_cast<HostSetupScreen*>(m_screens[(int)ScreenId::HOST_SETUP]);
+                if (hs->takeCommitted(entered)) {
+                    setStreamHost(entered, streamPort());
+                }
+            }
             m_current = next;
             m_screens[(int)m_current]->enter();
         }
@@ -262,6 +318,7 @@ void AppController::update() {
     uint32_t now = millis();
 
     PacketGenerator::update();
+    pollDiscovery();
     collectData();
     dispatchInput();
 

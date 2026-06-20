@@ -2,6 +2,17 @@
 
 All notable changes to the wiview project.
 
+## [Unreleased]
+
+### Added
+- **Zero-config host discovery.** The host companion broadcasts an announce
+  beacon (UDP :5008); the Cardputer auto-discovers the host, caches it in NVS,
+  and streams there — no IP to configure. `--no-announce` disables it.
+- Manual stream-host entry on the device (`h` key) as a fallback for networks
+  that block broadcast; persisted to NVS.
+- Stream-host resolution order: discovered/saved host → `WIVIEW_STREAM_HOST`
+  build flag → gateway.
+
 ## [0.2.0] — 2026-06-19
 
 ### Added

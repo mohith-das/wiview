@@ -78,6 +78,28 @@ while True:
         print(f"INF: {obj}")
 ```
 
+## Host Discovery (zero-config)
+
+So users don't have to look up and configure a host IP, the host companion
+broadcasts an **announce beacon** on the LAN and the Cardputer auto-discovers it.
+
+- **Transport:** UDP broadcast (limited `255.255.255.255` + the `/24` directed
+  broadcast), **port 5008**, every ~2 s.
+- **Direction:** Host → Cardputer.
+- **Beacon (8 bytes, big-endian):**
+
+| Offset | Size | Field   | Description                                  |
+|--------|------|---------|----------------------------------------------|
+| 0      | 4    | magic   | `0x77697669` ("wivi")                        |
+| 4      | 1    | version | `1`                                          |
+| 5      | 1    | type    | `2` (announce)                               |
+| 6      | 2    | port    | Port the host listens on for CSI (e.g. 5005) |
+
+The Cardputer uses the beacon's **source IP** + advertised port as its stream
+target, caches it in NVS, and re-points an active stream at it. Disable the
+broadcast with `--no-announce`. Manual entry (the `h` key) is the fallback when
+broadcast is filtered.
+
 ## Compatibility
 
 This is an **independent protocol**, not compatible with RuView's wire format.

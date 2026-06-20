@@ -106,13 +106,14 @@ void HomeScreen::update(const SensorData& d) {
 
     M5Cardputer.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
     M5Cardputer.Display.setCursor(4, 122);
-    M5Cardputer.Display.print("1:Home 2:Water 3:Breath r:Cal s:Stream");
+    M5Cardputer.Display.print("1/2/3 views  r:cal  s:stream  h:host");
 }
 
 void HomeScreen::handleKey(const Keyboard_Class::KeysState& keys) {
     for (char c : keys.word) {
         if (c == '2') { m_next = ScreenId::WATERFALL; return; }
         if (c == '3') { m_next = ScreenId::BREATHING; return; }
+        if (c == 'h') { m_next = ScreenId::HOST_SETUP; return; }
     }
 }
 

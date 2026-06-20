@@ -15,6 +15,12 @@ public:
 
     /// Clear saved credentials from NVS.
     static void clearNVS();
+
+    /// Load the saved stream-host IP (e.g. "192.168.1.50"). Empty if none.
+    static String loadHostFromNVS();
+
+    /// Save the stream-host IP (discovered or manually entered).
+    static void saveHostToNVS(const String& host);
 };
 
 } // namespace wiview

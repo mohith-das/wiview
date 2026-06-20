@@ -13,7 +13,7 @@ public:
     void update();
 
 private:
-    Screen* m_screens[3];
+    Screen* m_screens[(int)ScreenId::COUNT];
     WifiSetupScreen* m_screensWifi = nullptr;
     ScreenId m_current;
     SensorData m_data;
@@ -23,6 +23,8 @@ private:
     void showWifiSetup();
     void collectData();
     void dispatchInput();
+    void pollDiscovery();
+    void setStreamHost(const IPAddress& host, uint16_t port);
 };
 
 } // namespace wiview
