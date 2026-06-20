@@ -25,6 +25,12 @@ void test_motion_with_constant_signal();
 void test_motion_with_varying_signal();
 void test_motion_reset();
 
+// breathing
+void test_breathing_initial_invalid();
+void test_breathing_sine_at_12bpm();
+void test_breathing_constant_no_breathing();
+void test_breathing_reset();
+
 // imu gate
 void test_device_still();
 void test_device_bumped();
@@ -54,6 +60,11 @@ int main() {
     RUN_TEST(test_motion_with_constant_signal);
     RUN_TEST(test_motion_with_varying_signal);
     RUN_TEST(test_motion_reset);
+    // breathing
+    RUN_TEST(test_breathing_initial_invalid);
+    RUN_TEST(test_breathing_sine_at_12bpm);
+    RUN_TEST(test_breathing_constant_no_breathing);
+    RUN_TEST(test_breathing_reset);
     // imu gate
     RUN_TEST(test_device_still);
     RUN_TEST(test_device_bumped);
