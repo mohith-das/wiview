@@ -40,3 +40,4 @@ dist/
 opencode.json
 .opencode/
 cardputer-wifi-sense-PLAN.md
+wifi_creds.*
