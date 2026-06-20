@@ -19,6 +19,12 @@ public:
     /// True if streaming is active
     bool isActive() const { return m_active; }
 
+    /// Total packets sent since begin() (proxy for "actively streaming")
+    uint32_t packetsSent() const { return m_sequence; }
+
+    /// Current stream destination
+    IPAddress target() const { return m_target; }
+
     /// Send a CSI raw data packet (binary header + I/Q bytes)
     void sendCsiPacket(const int8_t* iq_data, uint16_t iq_len, uint32_t timestamp_ms);
 

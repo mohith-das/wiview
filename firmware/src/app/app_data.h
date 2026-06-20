@@ -36,6 +36,11 @@ struct SensorData {
     // Waterfall data (latest amplitude per subcarrier, allocated separately)
     float* amp_per_sc = nullptr;
     uint16_t num_sc = 0;
+
+    // UDP streaming state (toggled by the 's' key)
+    bool streaming = false;
+    uint32_t stream_target_ip = 0;  // destination IP when streaming (UDP: not a confirmed connection)
+    uint32_t stream_packets = 0;    // packets sent this session (proxy for "actively streaming")
 };
 
 } // namespace wiview

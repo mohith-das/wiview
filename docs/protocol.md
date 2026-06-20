@@ -81,4 +81,25 @@ while True:
 ## Compatibility
 
 This is an **independent protocol**, not compatible with RuView's wire format.
-A `--ruview-compat` bridge may be added in the future.
+
+A **`--ruview-compat` bridge** is included in the host companion. It re-encodes
+wiview frames into RuView's ADR-018 wire format and forwards them over UDP to a
+RuView sensing-server:
+
+- wiview CSI (`0x00`) → RuView CSI frame, magic `0xC5110001` (little-endian:
+  20-byte header — magic, node_id, n_antennas, n_subcarriers, freq_mhz, seq,
+  rssi, noise_floor, ppdu_type, flags — followed by the int8 I/Q pairs).
+- wiview inference (`0x01`) → RuView vitals packet, magic `0xC5110002` (32 bytes:
+  presence/motion flags, breathing rate ×100, motion energy, presence score).
+
+```bash
+# RuView listens for ESP32 CSI on UDP 5005 inside the container; publish it on a
+# different host port (this tool already binds host:5005) and bridge to it:
+docker run -d --name ruview -e CSI_SOURCE=esp32 -e RUVIEW_ALLOW_UNAUTHENTICATED=1 \
+    -e SENSING_BIND_ADDR=0.0.0.0 \
+    -p 127.0.0.1:3000:3000 -p 127.0.0.1:3001:3001 -p 127.0.0.1:5006:5005/udp \
+    ruvnet/wifi-densepose:latest
+
+python host/wiview_host.py --headless --ruview-compat \
+    --ruview-host 127.0.0.1 --ruview-port 5006
+```

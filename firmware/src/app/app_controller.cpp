@@ -31,6 +31,16 @@ static bool              g_cal_ready = false;
 static bool              g_streaming = false;
 static float             g_amp_sc_buffer[MAX_SUBCARRIERS] = {};
 
+// Resolve the UDP streaming target. Uses WIVIEW_STREAM_HOST (build flag) if set
+// and parseable, otherwise falls back to the gateway.
+static IPAddress streamTarget() {
+#ifdef WIVIEW_STREAM_HOST
+    IPAddress ip;
+    if (ip.fromString(WIVIEW_STREAM_HOST)) return ip;
+#endif
+    return WifiManager::gateway();
+}
+
 AppController::AppController() : m_current(ScreenId::HOME) {
     m_screens[0] = nullptr;
     m_screens[1] = nullptr;
@@ -120,18 +130,26 @@ void AppController::collectData() {
     if (!g_csi_ok || now - last_csi < 20) return;
     last_csi = now;
 
+    m_data.streaming      = g_streaming;
+    m_data.stream_packets = g_streaming ? g_streamer.packetsSent() : 0;
+
     float amp = csi_latest_amplitude();
     m_data.csi_rate_hz     = csi_packet_rate();
     m_data.subcarrier_count = csi_subcarrier_count();
     m_data.total_packets   = csi_total_packets();
     m_data.latest_amplitude = amp;
 
-    // Streaming: send CSI raw packet at CSI rate
+    // Streaming: send each freshly-captured raw CSI I/Q frame once.
     if (g_streaming && g_streamer.isActive()) {
-        // For real raw I/Q, we'd need the ring buffer from Phase 1.
-        // Send a placeholder packet for now.
-        static int8_t dummy_iq[16] = {};
-        g_streamer.sendCsiPacket(dummy_iq, 16, now);
+        static int8_t  iq[512];
+        static uint32_t last_iq_seq = 0;
+        uint16_t iq_len = 0;
+        uint32_t iq_seq = 0;
+        if (csi_latest_iq(iq, sizeof(iq), &iq_len, &iq_seq) &&
+            iq_len > 0 && iq_seq != last_iq_seq) {
+            last_iq_seq = iq_seq;
+            g_streamer.sendCsiPacket(iq, iq_len, now);
+        }
     }
 
     if (m_data.total_packets > 0 && m_data.subcarrier_count > 0) {
@@ -207,11 +225,13 @@ void AppController::dispatchInput() {
             if (c == 's') {
                 // Toggle streaming
                 if (!g_streaming) {
-                    g_streaming = g_streamer.begin(WifiManager::gateway(), 5005);
+                    g_streaming = g_streamer.begin(streamTarget(), 5005);
                 } else {
                     g_streamer.stop();
                     g_streaming = false;
                 }
+                m_data.streaming = g_streaming;
+                m_data.stream_target_ip = g_streaming ? (uint32_t)g_streamer.target() : 0;
                 return;
             }
             if (c == 'r') {

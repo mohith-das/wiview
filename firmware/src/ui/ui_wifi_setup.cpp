@@ -40,9 +40,17 @@ void WifiSetupScreen::renderPrompt() {
         }
     }
 
+    M5Cardputer.Display.setCursor(4, 84);
+    M5Cardputer.Display.setTextColor(
+        M5Cardputer.Keyboard.capslocked() ? TFT_YELLOW : TFT_DARKGREY, TFT_BLACK);
+    M5Cardputer.Display.printf("CAPS: %s (fn toggles)",
+        M5Cardputer.Keyboard.capslocked() ? "ON" : "off");
+
     M5Cardputer.Display.setCursor(4, 100);
     M5Cardputer.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
-    M5Cardputer.Display.print("Enter=confirm  Esc=clear");
+    M5Cardputer.Display.print("Enter=confirm  Del=backspace");
+    M5Cardputer.Display.setCursor(4, 112);
+    M5Cardputer.Display.print("Shift=caps  `=clear");
 }
 
 void WifiSetupScreen::update(const SensorData&) {
@@ -50,43 +58,38 @@ void WifiSetupScreen::update(const SensorData&) {
 }
 
 void WifiSetupScreen::handleKey(const Keyboard_Class::KeysState& keys) {
-    for (char c : keys.word) {
-        if (c == KEY_ENTER || c == '\n' || c == '\r') {
-            if (!m_enteringPassword) {
-                // Confirm SSID
-                if (m_ssid.length() > 0) {
-                    m_enteringPassword = true;
-                }
-            } else {
-                // Confirm password -> provisioning complete
-                if (m_password.length() > 0) {
-                    m_complete = true;
-                    return;
-                }
+    String& field = m_enteringPassword ? m_password : m_ssid;
+
+    // Enter / Backspace / Space arrive as boolean flags on the Cardputer
+    // keyboard, NOT as characters in keys.word.
+    if (keys.enter) {
+        if (!m_enteringPassword) {
+            if (m_ssid.length() > 0) m_enteringPassword = true;  // SSID -> password
+        } else if (m_password.length() > 0) {
+            m_complete = true;  // password confirmed -> done
+            return;
+        }
+        m_dirty = true;
+    } else if (keys.del) {
+        if (field.length() > 0) field.remove(field.length() - 1);
+        m_dirty = true;
+    } else if (keys.space) {
+        field += ' ';
+        m_dirty = true;
+    } else if (keys.fn && keys.word.empty()) {
+        // Standalone fn press toggles caps lock (no hardware caps key exists)
+        M5Cardputer.Keyboard.setCapsLocked(!M5Cardputer.Keyboard.capslocked());
+        m_dirty = true;
+    } else {
+        for (char c : keys.word) {
+            if (c == '`') {
+                // Backtick clears the current field
+                field = "";
+                m_dirty = true;
+            } else if (c >= 32 && c <= 126) {
+                field += c;
+                m_dirty = true;
             }
-            m_dirty = true;
-        } else if (c == KEY_BACKSPACE || c == 8 || c == 127) {
-            if (!m_enteringPassword) {
-                if (m_ssid.length() > 0) m_ssid.remove(m_ssid.length() - 1);
-            } else {
-                if (m_password.length() > 0) m_password.remove(m_password.length() - 1);
-            }
-            m_dirty = true;
-        } else if (c == c == 27) {
-            if (m_enteringPassword) {
-                m_password = "";
-            }
-            m_ssid = "";
-            m_enteringPassword = false;
-            m_dirty = true;
-        } else if (c >= 32 && c <= 126) {
-            // Printable character
-            if (!m_enteringPassword) {
-                m_ssid += c;
-            } else {
-                m_password += c;
-            }
-            m_dirty = true;
         }
     }
 

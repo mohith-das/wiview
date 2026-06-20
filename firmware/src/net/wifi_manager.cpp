@@ -6,6 +6,10 @@ bool WifiManager::connect(const char* ssid, const char* password) {
     Serial.printf("[WiFi] Connecting to %s...\n", ssid);
 
     WiFi.mode(WIFI_STA);
+    // Disable modem power-save: in WIFI_PS_MIN_MODEM (the default) the radio
+    // sleeps between beacons and drops most RX packets, which starves the CSI
+    // callback. CSI sensing needs the radio awake to receive every reply.
+    WiFi.setSleep(false);
     WiFi.begin(ssid, password);
 
     uint32_t start = millis();

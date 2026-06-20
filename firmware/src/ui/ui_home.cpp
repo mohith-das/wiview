@@ -86,14 +86,27 @@ void HomeScreen::update(const SensorData& d) {
         M5Cardputer.Display.printf("BPM: %.1f", d.breathing_bpm);
     }
 
-    // Line 5: WiFi status + view hint
+    // Line 5: WiFi + streaming status
     M5Cardputer.Display.fillRect(0, 106, 240, 29, TFT_BLACK);
     M5Cardputer.Display.setCursor(4, 108);
     M5Cardputer.Display.setTextColor(TFT_GREEN, TFT_BLACK);
-    M5Cardputer.Display.print("WiFi OK");
+    M5Cardputer.Display.print("WiFi");
+
+    M5Cardputer.Display.setCursor(40, 108);
+    if (d.streaming) {
+        // UDP is connectionless: this shows the destination + a live packet
+        // count (climbing == we're actively sending), not a confirmed client.
+        M5Cardputer.Display.setTextColor(TFT_GREEN, TFT_BLACK);
+        IPAddress ip(d.stream_target_ip);
+        M5Cardputer.Display.printf("STREAM>%s #%u", ip.toString().c_str(), d.stream_packets);
+    } else {
+        M5Cardputer.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
+        M5Cardputer.Display.print("stream off (s)");
+    }
+
     M5Cardputer.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
     M5Cardputer.Display.setCursor(4, 122);
-    M5Cardputer.Display.print("1:Home 2:Water 3:Breath r:Cal");
+    M5Cardputer.Display.print("1:Home 2:Water 3:Breath r:Cal s:Stream");
 }
 
 void HomeScreen::handleKey(const Keyboard_Class::KeysState& keys) {

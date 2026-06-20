@@ -19,12 +19,20 @@ namespace wiview {
 
 // ── Ring buffer ──────────────────────────────────────────────────────────
 static constexpr size_t kTimestampWindow = 64;
+// Max raw I/Q bytes per CSI record. LLTF @ HT20 is ~128 bytes (64 subcarriers);
+// 512 covers HT40 / merged-LTF with margin.
+static constexpr size_t kMaxIqBytes = 512;
 
 static volatile uint32_t g_packet_count   = 0;
 static volatile float    g_latest_amp     = 0.0f;
 static volatile uint16_t g_subcarrier_cnt = 0;
 static volatile uint32_t g_timestamps[kTimestampWindow] = {};
 static volatile uint8_t  g_ts_idx         = 0;
+
+// Latest raw I/Q snapshot (written by the RX callback, read by the app task).
+static int8_t            g_iq_buf[kMaxIqBytes];
+static volatile uint16_t g_iq_len         = 0;
+static volatile uint32_t g_iq_seq         = 0;
 
 // ── CSI RX callback (runs in WiFi task — keep FAST) ──────────────────────
 static void IRAM_ATTR csi_rx_cb(void* ctx, wifi_csi_info_t* info) {
@@ -45,6 +53,14 @@ static void IRAM_ATTR csi_rx_cb(void* ctx, wifi_csi_info_t* info) {
 
     g_latest_amp     = mean_amp;
     g_subcarrier_cnt = num_pairs;
+
+    // Snapshot the raw I/Q bytes so the app task can stream them downstream
+    // (e.g. to the host / RuView). info->buf is valid only during this call.
+    uint16_t n = (uint16_t)info->len;
+    if (n > kMaxIqBytes) n = kMaxIqBytes;
+    memcpy(g_iq_buf, info->buf, n);
+    g_iq_len = n;
+    g_iq_seq++;
 
     // Rolling timestamp for packet rate
     g_timestamps[g_ts_idx % kTimestampWindow] = (uint32_t)millis();
@@ -119,6 +135,24 @@ float csi_latest_amplitude() {
 
 uint16_t csi_subcarrier_count() {
     return g_subcarrier_cnt;
+}
+
+bool csi_latest_iq(int8_t* out, uint16_t cap, uint16_t* out_len, uint32_t* out_seq) {
+    if (!out || cap == 0) return false;
+    // Seqlock-style retry to minimise tearing against the RX callback.
+    for (int attempt = 0; attempt < 3; attempt++) {
+        uint32_t s1 = g_iq_seq;
+        uint16_t n  = g_iq_len;
+        if (n == 0) return false;
+        if (n > cap) n = cap;
+        memcpy(out, g_iq_buf, n);
+        if (g_iq_seq == s1) {           // no write happened mid-copy
+            *out_len = n;
+            *out_seq = s1;
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace wiview

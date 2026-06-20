@@ -34,4 +34,14 @@ float csi_latest_amplitude();
  */
 uint16_t csi_subcarrier_count();
 
+/**
+ * Copy the most recent raw CSI I/Q bytes (int8 I, int8 Q, ... pairs) into
+ * `out` (capacity `cap` bytes). Writes the byte count to *out_len and the
+ * capture sequence number to *out_seq.
+ *
+ * Returns false if no CSI has been captured yet. Best-effort w.r.t. the RX
+ * callback running on the WiFi task — a torn read is harmless for streaming.
+ */
+bool csi_latest_iq(int8_t* out, uint16_t cap, uint16_t* out_len, uint32_t* out_seq);
+
 } // namespace wiview
