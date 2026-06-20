@@ -2,7 +2,7 @@
 
 All notable changes to the wiview project.
 
-## [0.1.0] — Unreleased
+## [0.2.0] — 2026-06-19
 
 ### Added
 - Phase 0: Repository bootstrap, hello-world for Cardputer-Adv

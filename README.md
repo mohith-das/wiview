@@ -75,18 +75,27 @@ Stream CSI data and inferences to your computer for logging and live plotting:
 
 ```bash
 pip install -r host/requirements.txt
-python host/wiview_host.py --csv data.csv
+python host/wiview_host.py --csv data.csv          # live plot + CSV log
+python host/wiview_host.py --headless              # terminal only, no GUI
 ```
 
-Press `s` on the Cardputer to start streaming. See [`docs/protocol.md`](docs/protocol.md) for the wire format.
+Press `s` on the Cardputer to start streaming. By default the firmware streams
+to the **gateway**; to reach your computer, build with your host IP:
+`-DWIVIEW_STREAM_HOST=\"192.168.1.50\"` in `platformio.ini`.
+
+**RuView bridge:** `--ruview-compat` re-encodes frames into RuView's ADR-018
+wire format and forwards them to a RuView sensing-server. See
+[`docs/protocol.md`](docs/protocol.md) for the wire format and bridge setup.
 
 ## Hardware Requirements
 
-- **M5Stack Cardputer-Adv** (Stamp-S3A / ESP32-S3FN8)
+- **M5Stack Cardputer-Adv** (Stamp-S3A / ESP32-S3FN8) — the supported, tested target
   - 8 MB flash, no PSRAM
   - BMI270 IMU, ES8311 audio, ST7789V2 display
-- Works with the original Cardputer (without IMU gate)
-- USB-C cable for flashing
+- **Original Cardputer:** *untested.* The radio-based sensing (presence/motion/
+  breathing) should work, but the build targets the Adv and the device-motion
+  gate uses the BMI270, which the original lacks — expect to need small changes.
+- USB-C cable for flashing (the device runs untethered on its battery afterward)
 
 ## Repository
 
@@ -100,7 +109,7 @@ wiview/
 │   ├── net/              # WiFi, NVS provisioning, UDP streamer
 │   ├── ui/               # Home, waterfall, breathing screens
 │   └── app/              # App controller + state machine
-├── test/test_dsp/        # 25 native unit tests (PlatformIO native env)
+├── test/test_dsp/        # 27 native unit tests (PlatformIO native env)
 ├── host/                 # Python companion (UDP receiver + live plot)
 ├── docs/                 # Flashing guide, architecture, protocol spec
 └── .github/workflows/    # CI: build + tests + release-on-tag
