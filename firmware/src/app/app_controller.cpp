@@ -274,6 +274,12 @@ void AppController::collectData() {
 void AppController::dispatchInput() {
     M5Cardputer.update();
 
+    // Expire the "forget WiFi" confirmation prompt after 5 s.
+    if (m_wifiForgetArmedMs != 0 && millis() - m_wifiForgetArmedMs >= 5000) {
+        m_wifiForgetArmedMs = 0;
+        m_data.wifi_forget_armed = false;
+    }
+
     if (M5.BtnA.wasPressed()) {
         // G0 cycles only the main views (Home/Waterfall/Breathing), not config
         // screens like Host setup.
@@ -314,6 +320,20 @@ void AppController::dispatchInput() {
                 m_data.ruview_mode = rv;
                 WifiProvision::saveRuViewModeToNVS(rv);
                 Serial.printf("[Fmt] output = %s\n", rv ? "RuView ADR-018" : "wiview native");
+                return;
+            }
+            if (c == 'w') {
+                // Forget WiFi — two-press confirm to avoid an accidental wipe.
+                uint32_t now = millis();
+                if (m_wifiForgetArmedMs != 0 && now - m_wifiForgetArmedMs < 5000) {
+                    Serial.println("[WiFi] Forgetting credentials. Rebooting to setup...");
+                    WifiProvision::clearWifiCreds();
+                    delay(300);
+                    ESP.restart();
+                } else {
+                    m_wifiForgetArmedMs = now;
+                    m_data.wifi_forget_armed = true;
+                }
                 return;
             }
         }

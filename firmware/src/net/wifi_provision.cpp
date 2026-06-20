@@ -33,6 +33,14 @@ void WifiProvision::clearNVS() {
     prefs.end();
 }
 
+void WifiProvision::clearWifiCreds() {
+    Preferences prefs;
+    prefs.begin(NVS_NS, false);
+    prefs.remove(KEY_SSID);
+    prefs.remove(KEY_PASS);
+    prefs.end();
+}
+
 String WifiProvision::loadHostFromNVS() {
     Preferences prefs;
     if (!prefs.begin(NVS_NS, true)) return "";

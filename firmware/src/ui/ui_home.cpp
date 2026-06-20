@@ -109,9 +109,14 @@ void HomeScreen::update(const SensorData& d) {
     M5Cardputer.Display.setTextColor(d.ruview_mode ? TFT_ORANGE : TFT_DARKGREY, TFT_BLACK);
     M5Cardputer.Display.print(d.ruview_mode ? "RuVw" : "wivw");
 
-    M5Cardputer.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
     M5Cardputer.Display.setCursor(4, 122);
-    M5Cardputer.Display.print("r:cal s:stream h:host u:fmt");
+    if (d.wifi_forget_armed) {
+        M5Cardputer.Display.setTextColor(TFT_RED, TFT_BLACK);
+        M5Cardputer.Display.print("Press w again to FORGET WiFi");
+    } else {
+        M5Cardputer.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
+        M5Cardputer.Display.print("r:cal s:stream h:host u:fmt w:wifi");
+    }
 }
 
 void HomeScreen::handleKey(const Keyboard_Class::KeysState& keys) {

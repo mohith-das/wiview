@@ -16,6 +16,9 @@ public:
     /// Clear saved credentials from NVS.
     static void clearNVS();
 
+    /// Remove only the WiFi credentials (keeps host IP / RuView-mode settings).
+    static void clearWifiCreds();
+
     /// Load the saved stream-host IP (e.g. "192.168.1.50"). Empty if none.
     static String loadHostFromNVS();
 

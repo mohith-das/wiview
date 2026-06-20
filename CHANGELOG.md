@@ -2,6 +2,13 @@
 
 All notable changes to the wiview project.
 
+## [Unreleased]
+
+### Added
+- **Forget WiFi hotkey (`w`).** Press `w` on the Home screen (twice, to confirm)
+  to clear saved WiFi credentials and reboot into the setup screen — change
+  networks anytime without USB. Keeps the saved host IP / RuView-mode settings.
+
 ## [0.3.0] — 2026-06-19
 
 ### Added

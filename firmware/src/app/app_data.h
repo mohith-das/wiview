@@ -42,6 +42,7 @@ struct SensorData {
     uint32_t stream_target_ip = 0;  // destination IP when streaming (UDP: not a confirmed connection)
     uint32_t stream_packets = 0;    // packets sent this session (proxy for "actively streaming")
     bool ruview_mode = false;       // true = emit RuView ADR-018; false = wiview native format
+    bool wifi_forget_armed = false; // 'w' pressed once; awaiting confirm to forget WiFi
 };
 
 } // namespace wiview
