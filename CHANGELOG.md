@@ -2,7 +2,7 @@
 
 All notable changes to the wiview project.
 
-## [Unreleased]
+## [0.3.2] — 2026-06-19
 
 ### Changed
 - **Smoother breathing estimate.** The detector now measures the *period*
