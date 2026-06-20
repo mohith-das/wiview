@@ -2,6 +2,14 @@
 
 All notable changes to the wiview project.
 
+## [Unreleased]
+
+### Changed
+- **Smoother breathing estimate.** The detector now measures the *period*
+  between zero-crossings (median of intervals) over a longer ~12.8 s window
+  instead of counting crossings, so BPM is a continuous value rather than
+  jumping in coarse ~9 BPM steps. Added a steadiness regression test.
+
 ## [0.3.1] — 2026-06-19
 
 ### Added

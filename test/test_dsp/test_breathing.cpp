@@ -59,6 +59,32 @@ void test_breathing_sine_in_noise() {
     TEST_ASSERT_FLOAT_WITHIN(7.0f, 15.0f, bd.bpm());
 }
 
+// Smoothness: a steady breathing signal should yield a stable estimate that
+// doesn't jump in coarse steps (the old crossing-count method quantized to
+// ~9 BPM and bounced). Uses the period/interval estimator.
+void test_breathing_smooth_steady() {
+    BreathingDetector bd;
+    int i = 0;
+    for (; i < 1024; i++) {                       // warm up at 15 BPM (0.25 Hz)
+        float t = (float)i / 20.0f;
+        bd.add(50.0f + 5.0f * sinf(2.0f * PI * 0.25f * t));
+    }
+    float prev = bd.bpm();
+    float max_step = 0.0f, mn = prev, mx = prev;
+    for (; i < 1024 + 150; i++) {
+        float t = (float)i / 20.0f;
+        bd.add(50.0f + 5.0f * sinf(2.0f * PI * 0.25f * t));
+        float b = bd.bpm();
+        float step = (b > prev) ? (b - prev) : (prev - b);
+        if (step > max_step) max_step = step;
+        if (b < mn) mn = b;
+        if (b > mx) mx = b;
+        prev = b;
+    }
+    TEST_ASSERT_TRUE(max_step < 1.5f);            // no coarse step-jumps
+    TEST_ASSERT_TRUE((mx - mn) < 3.0f);           // stays in a tight band
+}
+
 void test_breathing_reset() {
     BreathingDetector bd;
     for (int i = 0; i < 512; i++) {
