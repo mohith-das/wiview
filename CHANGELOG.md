@@ -2,7 +2,7 @@
 
 All notable changes to the wiview project.
 
-## [Unreleased]
+## [0.3.0] — 2026-06-19
 
 ### Added
 - **Zero-config host discovery.** The host companion broadcasts an announce
