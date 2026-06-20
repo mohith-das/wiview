@@ -9,6 +9,8 @@ jobs:
   build-and-release:
     name: Build & Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required for softprops/action-gh-release to publish
     steps:
       - uses: actions/checkout@v4
 
@@ -25,8 +27,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install PlatformIO
-        run: pip install platformio
+      - name: Install PlatformIO + esptool
+        run: pip install platformio esptool
 
       - name: Build firmware
         run: pio run -e cardputer
