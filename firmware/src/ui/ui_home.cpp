@@ -104,9 +104,14 @@ void HomeScreen::update(const SensorData& d) {
         M5Cardputer.Display.print("stream off (s)");
     }
 
+    // Output format indicator
+    M5Cardputer.Display.setCursor(200, 108);
+    M5Cardputer.Display.setTextColor(d.ruview_mode ? TFT_ORANGE : TFT_DARKGREY, TFT_BLACK);
+    M5Cardputer.Display.print(d.ruview_mode ? "RuVw" : "wivw");
+
     M5Cardputer.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
     M5Cardputer.Display.setCursor(4, 122);
-    M5Cardputer.Display.print("1/2/3 views  r:cal  s:stream  h:host");
+    M5Cardputer.Display.print("r:cal s:stream h:host u:fmt");
 }
 
 void HomeScreen::handleKey(const Keyboard_Class::KeysState& keys) {

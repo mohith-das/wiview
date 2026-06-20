@@ -125,3 +125,17 @@ docker run -d --name ruview -e CSI_SOURCE=esp32 -e RUVIEW_ALLOW_UNAUTHENTICATED=
 python host/wiview_host.py --headless --ruview-compat \
     --ruview-host 127.0.0.1 --ruview-port 5006
 ```
+
+### Direct mode (no bridge)
+
+Alternatively the firmware can emit ADR-018 itself — press `u` on the Cardputer
+to switch its output format — and stream straight to RuView with no host process.
+Publish RuView's UDP port on the LAN and point the device at it (via discovery or
+the `h` key):
+
+```bash
+docker run -d --name ruview -e CSI_SOURCE=esp32 -e RUVIEW_ALLOW_UNAUTHENTICATED=1 \
+    -e SENSING_BIND_ADDR=0.0.0.0 \
+    -p 127.0.0.1:3000:3000 -p 127.0.0.1:3001:3001 -p 5005:5005/udp \
+    ruvnet/wifi-densepose:latest
+```

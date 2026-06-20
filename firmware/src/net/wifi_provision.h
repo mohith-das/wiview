@@ -21,6 +21,10 @@ public:
 
     /// Save the stream-host IP (discovered or manually entered).
     static void saveHostToNVS(const String& host);
+
+    /// Load/save the "RuView direct" output-format toggle.
+    static bool loadRuViewModeFromNVS();
+    static void saveRuViewModeToNVS(bool on);
 };
 
 } // namespace wiview

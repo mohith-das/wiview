@@ -111,6 +111,13 @@ void AppController::finishInit() {
     }
     HostDiscovery::begin();
 
+    // Output format: wiview native (for the host companion / bridge) or RuView
+    // ADR-018 direct. Persisted across reboots.
+    bool rv = WifiProvision::loadRuViewModeFromNVS();
+    g_streamer.setRuViewMode(rv);
+    m_data.ruview_mode = rv;
+    Serial.printf("[Fmt] output = %s\n", rv ? "RuView ADR-018" : "wiview native");
+
     m_screens[(int)m_current]->enter();
     // Streaming is OFF by default; user toggles with 's' key.
 }
@@ -224,22 +231,28 @@ void AppController::collectData() {
             m_data.breathing_waveform = g_breath.waveform();
             m_data.breathing_valid = g_breath.valid();
 
-            // Send inference JSON at ~2 Hz
+            // Send inferences at ~2 Hz — RuView vitals (ADR-018) in RuView mode,
+            // wiview JSON otherwise.
             static uint32_t last_inf = 0;
             if (g_streaming && now - last_inf >= 500) {
                 last_inf = now;
-                char json[256];
-                snprintf(json, sizeof(json),
-                    "{\"t\":%u,\"presence\":%s,\"conf\":%.2f,\"motion\":%.2f,"
-                    "\"bpm\":%.1f,\"still\":%s,\"csi_hz\":%.1f}",
-                    now,
-                    m_data.presence_detected ? "true" : "false",
-                    m_data.presence_confidence,
-                    m_data.motion_level,
-                    m_data.breathing_bpm,
-                    m_data.device_still ? "true" : "false",
-                    m_data.csi_rate_hz);
-                g_streamer.sendInference(json);
+                if (g_streamer.ruViewMode()) {
+                    g_streamer.sendVitals(m_data.presence_detected, m_data.motion_level,
+                                          m_data.breathing_bpm, now);
+                } else {
+                    char json[256];
+                    snprintf(json, sizeof(json),
+                        "{\"t\":%u,\"presence\":%s,\"conf\":%.2f,\"motion\":%.2f,"
+                        "\"bpm\":%.1f,\"still\":%s,\"csi_hz\":%.1f}",
+                        now,
+                        m_data.presence_detected ? "true" : "false",
+                        m_data.presence_confidence,
+                        m_data.motion_level,
+                        m_data.breathing_bpm,
+                        m_data.device_still ? "true" : "false",
+                        m_data.csi_rate_hz);
+                    g_streamer.sendInference(json);
+                }
             }
 
             uint16_t ns = m_data.subcarrier_count;
@@ -292,6 +305,15 @@ void AppController::dispatchInput() {
                 // Recalibrate
                 g_cal.reset();
                 g_cal_ready = false;
+                return;
+            }
+            if (c == 'u') {
+                // Toggle output format: wiview native <-> RuView ADR-018 direct
+                bool rv = !g_streamer.ruViewMode();
+                g_streamer.setRuViewMode(rv);
+                m_data.ruview_mode = rv;
+                WifiProvision::saveRuViewModeToNVS(rv);
+                Serial.printf("[Fmt] output = %s\n", rv ? "RuView ADR-018" : "wiview native");
                 return;
             }
         }

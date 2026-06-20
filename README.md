@@ -51,6 +51,7 @@ esptool.py --chip esp32s3 --port COMx write_flash 0x0 wiview-full.bin
 | `s`  | Toggle UDP streaming          |
 | `r`  | Recalibrate baseline          |
 | `h`  | Set stream host IP (manual)   |
+| `u`  | Toggle output: wiview / RuView |
 
 ## Build From Source
 
@@ -89,9 +90,20 @@ press `h` on the Cardputer and type your computer's IP. As a build-time override
 you can also set `-DWIVIEW_STREAM_HOST=\"192.168.1.50\"` in `platformio.ini`.
 Resolution order: discovered/saved host → build flag → gateway.
 
-**RuView bridge:** `--ruview-compat` re-encodes frames into RuView's ADR-018
-wire format and forwards them to a RuView sensing-server. See
-[`docs/protocol.md`](docs/protocol.md) for the wire format and bridge setup.
+### RuView integration
+
+[RuView](https://github.com/ruvnet/RuView) is a passive UDP listener for its own
+ADR-018 CSI format. Two ways to feed it:
+
+1. **Direct (no host process):** press `u` on the Cardputer to switch its output
+   to RuView's ADR-018 format, then stream straight to the RuView sensing-server.
+   Set RuView's host with `h` (or discovery), and run RuView with its UDP port
+   published on the LAN (`-p 5005:5005/udp -e CSI_SOURCE=esp32`).
+2. **Bridge:** keep the Cardputer in native mode and run
+   `wiview_host.py --ruview-compat`, which translates frames to ADR-018 and adds
+   auto-discovery + the wiview dashboard.
+
+See [`docs/protocol.md`](docs/protocol.md) for the ADR-018 wire format.
 
 ## Hardware Requirements
 

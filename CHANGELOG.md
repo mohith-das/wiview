@@ -12,6 +12,10 @@ All notable changes to the wiview project.
   that block broadcast; persisted to NVS.
 - Stream-host resolution order: discovered/saved host → `WIVIEW_STREAM_HOST`
   build flag → gateway.
+- **Direct RuView mode (`u` key).** The Cardputer can emit RuView's ADR-018 CSI
+  (`0xC5110001`) and vitals (`0xC5110002`) natively and stream straight to a
+  RuView sensing-server — no Python bridge needed. Persisted in NVS; shown on
+  the Home screen.
 
 ## [0.2.0] — 2026-06-19
 
