@@ -41,3 +41,8 @@ opencode.json
 .opencode/
 cardputer-wifi-sense-PLAN.md
 wifi_creds.*
+
+# Host companion artifacts
+host/__pycache__/
+host/*.csv
+host/*.png

@@ -2,11 +2,10 @@
 #include <M5Cardputer.h>
 #include "app_data.h"
 #include "ui/ui_screen.h"
+#include "ui/ui_wifi_setup.h"
 
 namespace wiview {
 
-/// Top-level application controller. Manages screen switching,
-/// sensor data aggregation, and the main loop.
 class AppController {
 public:
     AppController();
@@ -14,11 +13,14 @@ public:
     void update();
 
 private:
-    Screen* m_screens[3];   // HOME, WATERFALL, BREATHING
+    Screen* m_screens[3];
+    WifiSetupScreen* m_screensWifi = nullptr;
     ScreenId m_current;
     SensorData m_data;
 
     void initScreens();
+    void finishInit();
+    void showWifiSetup();
     void collectData();
     void dispatchInput();
 };
