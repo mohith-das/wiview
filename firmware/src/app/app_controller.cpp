@@ -168,7 +168,13 @@ void AppController::collectData() {
             g_motion.add(amp, now);
             m_data.motion_level = g_motion.motion_level();
 
-            g_breath.add(amp);
+            // Feed the breathing detector at its expected ~20 Hz rate (the
+            // collect loop runs faster); its BPM math assumes 20 Hz samples.
+            static uint32_t last_breath_ms = 0;
+            if (now - last_breath_ms >= 50) {
+                last_breath_ms = now;
+                g_breath.add(amp);
+            }
             m_data.breathing_bpm   = g_breath.bpm();
             m_data.breathing_waveform = g_breath.waveform();
             m_data.breathing_valid = g_breath.valid();

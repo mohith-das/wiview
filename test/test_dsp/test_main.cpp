@@ -29,6 +29,8 @@ void test_motion_reset();
 void test_breathing_initial_invalid();
 void test_breathing_sine_at_12bpm();
 void test_breathing_constant_no_breathing();
+void test_breathing_noise_not_pinned_high();
+void test_breathing_sine_in_noise();
 void test_breathing_reset();
 
 // imu gate
@@ -64,6 +66,8 @@ int main() {
     RUN_TEST(test_breathing_initial_invalid);
     RUN_TEST(test_breathing_sine_at_12bpm);
     RUN_TEST(test_breathing_constant_no_breathing);
+    RUN_TEST(test_breathing_noise_not_pinned_high);
+    RUN_TEST(test_breathing_sine_in_noise);
     RUN_TEST(test_breathing_reset);
     // imu gate
     RUN_TEST(test_device_still);

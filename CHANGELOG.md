@@ -26,6 +26,10 @@ All notable changes to the wiview project.
   and generate steady RX traffic via ICMP ping (was UDP to a dead port)
 - WiFi setup keyboard: Enter/Backspace/Space/caps now work (special keys are
   boolean flags on the Cardputer keyboard, not characters in `keys.word`)
+- Breathing BPM no longer pins at the clamp ceiling on real CSI: the
+  zero-crossing detector now low-passes to the breathing band and uses
+  hysteresis to reject noise, and the detector is fed at its expected 20 Hz
+  rate. Added native regression tests (noise-only, breathing-in-noise)
 
 ### Technical Notes
 - Target hardware: M5Stack Cardputer-Adv (ESP32-S3FN8, no PSRAM, BMI270 IMU)
